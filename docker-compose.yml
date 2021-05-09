@@ -1,0 +1,61 @@
+version: '3'
+
+#Docker Networks
+networks:
+  app-network:
+    driver: bridge
+
+services:
+  wordpress:
+    depends_on:
+      - primedb
+    image: wordpress:latest
+    container_name: primewordpress
+    ports:
+      - "${DOCKER_WEBSERVER_HOST}:80"
+    restart: always
+    environment:
+      WORDPRESS_DB_HOST: primedb:3306
+      WORDPRESS_DB_USER: ${DB_USERNAME}
+      WORDPRESS_DB_PASSWORD: ${DB_PASSWORD}
+      WORDPRESS_DB_NAME: ${DB_DATABASE}
+    volumes:
+      - .:/var/www/html
+    networks:
+      - app-network
+
+  #MySQL Service
+  primedb:
+    image: mariadb:latest
+    container_name: primedb
+    restart: always
+    command: --sql_mode=NO_AUTO_CREATE_USER,NO_ENGINE_SUBSTITUTION --innodb_use_native_aio=0
+    tty: true
+    ports:
+      - "${DOCKER_DBSERVER_HOST}:3306"
+    environment:
+      MYSQL_DATABASE: ${DB_DATABASE}
+      MYSQL_ROOT_PASSWORD: ${DB_PASSWORD}
+      MYSQL_USER: ${DB_USERNAME}
+      MYSQL_PASSWORD: ${DB_PASSWORD}
+      SERVICE_TAGS: dev
+      SERVICE_NAME: mysql
+    volumes:
+      - ./mysql:/var/lib/mysql
+    networks:
+      - app-network
+
+  #PHPMyAdmin Service
+  phpmyadmin:
+    depends_on:
+      - primedb
+    image: phpmyadmin/phpmyadmin:latest
+    container_name: primemyadmin
+    restart: always
+    ports:
+      - '${DOCKER_PHPMYADMIN_HOST}:80'
+    environment:
+      PMA_HOST: primedb
+      UPLOAD_LIMIT: 3000000000
+    networks:
+      - app-network
